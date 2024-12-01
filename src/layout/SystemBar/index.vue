@@ -6,14 +6,20 @@
         size="small"
         rounded="0"
         :ripple="false"
-        @click="onClick"
+        @click="onMinClick"
       >
         <v-icon>mdi-minus-thick</v-icon>
       </v-btn>
-      <v-btn variant="text" size="small" :ripple="false" @click="onClick2">
+      <v-btn variant="text" size="small" :ripple="false" @click="onMaxClick">
         <v-icon>mdi-window-maximize</v-icon>
       </v-btn>
-      <v-btn variant="text" size="small" color="error" :ripple="false">
+      <v-btn
+        variant="text"
+        size="small"
+        color="error"
+        :ripple="false"
+        @click="onCloseClick"
+      >
         <v-icon>mdi-close-box</v-icon>
       </v-btn>
     </div>
@@ -22,9 +28,16 @@
 </template>
 
 <script setup lang="ts">
-const onClick = async () => {
-  // const ret = await ipcRenderer.insetWorkDir({ id: "123456", name: "你好" });
-  // console.log(ret);
+const onMinClick = () => {
+  window.ipcRenderer.send("window-min");
+};
+
+const onMaxClick = () => {
+  window.ipcRenderer.send("window-max");
+};
+
+const onCloseClick = () => {
+  window.ipcRenderer.send("window-close");
 };
 
 const onClick2 = async () => {

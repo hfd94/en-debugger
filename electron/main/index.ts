@@ -133,6 +133,27 @@ ipcMain.handle('open-win', (_, arg) => {
 })
 
 
+ipcMain.on('window-min', function () {
+    if (win) {
+        win.minimize();
+    }
+})
+
+ipcMain.on('window-max', function () {
+    if (!win) { return }
+    if (win.isMaximized()) {
+        win.restore();
+    } else {
+        win.maximize();
+    }
+})
+ipcMain.on('window-close', function () {
+    if (!win) { return }
+    win.close();
+})
+
+
+
 
 ipcMain.handle("insetWorkDir", (_, args) => {
     console.log(args)
