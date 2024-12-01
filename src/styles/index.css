@@ -1,0 +1,15 @@
+/* @import "vfonts/IBMPlexMono.css"; */
+
+html {
+  font-family: Helvetica, Tahoma, Arial, "PingFang SC", "Hiragino Sans GB",
+    "Heiti SC", "Microsoft YaHei", "WenQuanYi Micro Hei" sans-serif !important;
+  overflow: hidden !important;
+}
+body {
+  padding-left: 2px;
+}
+
+.tooltip .v-overlay__content {
+  padding: 2px 14px !important;
+  font-size: 12px !important;
+}
