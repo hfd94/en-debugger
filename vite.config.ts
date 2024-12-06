@@ -1,8 +1,9 @@
 import fs from 'node:fs'
 
+
 import { fileURLToPath, URL } from 'node:url'
 import pkg from "./package.json"
-import { defineConfig } from 'vite'
+import { defineConfig, PluginOption } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
@@ -11,24 +12,63 @@ import electronRender from 'vite-plugin-electron-renderer'
 import Vuetify from 'vite-plugin-vuetify'
 import ViteFonts from 'unplugin-fonts/vite'
 import monacoEditorPlugin from 'vite-plugin-monaco-editor'
-import path from 'path'
-import dts from 'vite-plugin-dts'
+import path from 'node:path'
 
+function copyFile() {
+  return {
+    name: 'copy-electron-dist',
+    apply: 'build',
+
+    writeBundle() {
+      const sourceFiles = [
+        { src: './dist-electron/main/index.js', dest: './dist/main/index.js' },
+        { src: './dist-electron/preload/index.js', dest: './dist/preload/index.js' },
+      ];
+
+      sourceFiles.forEach(({ src, dest }) => {
+        const destinationDir = path.dirname(dest);
+        fs.mkdir(destinationDir, { recursive: true }, (err) => {
+          if (err) {
+            console.error('无法创建目标目录:', err);
+            return;
+          }
+          fs.copyFileSync(src, dest);
+        });
+      });
+    },
+  }
+}
 
 export default defineConfig(({ command }) => {
-  fs.rmSync('dist-electron', { recursive: true, force: true })
-
-
+  if (command == "serve") {
+    fs.rmSync('dist-electron', { recursive: true, force: true })
+  }
   const isServe = command === 'serve'
   const isBuild = command === 'build'
   const sourcemap = isServe || !!process.env.VSCODE_DEBUG
 
+
+
   return {
+    base: "./",
     plugins: [
       vue(),
       vueJsx(),
       vueDevTools(),
-      electron([
+      Vuetify(),
+      ViteFonts({
+        google: {
+          families: [{
+            name: 'Roboto',
+            styles: 'wght@100;300;400;500;700;900',
+          }],
+        },
+      }),
+      monacoEditorPlugin({
+        languageWorkers: ['editorWorkerService', 'typescript', 'json']
+      }),
+
+      isServe && electron([
         {
           // 入口文件
           entry: 'electron/main/index.ts',
@@ -66,40 +106,16 @@ export default defineConfig(({ command }) => {
 
         }, {}
       ]),
-      electronRender(),
-      Vuetify(),
-      ViteFonts({
-        google: {
-          families: [{
-            name: 'Roboto',
-            styles: 'wght@100;300;400;500;700;900',
-          }],
-        },
-      }),
-      monacoEditorPlugin({
-        languageWorkers: ['editorWorkerService', 'typescript', 'json']
-      }),
-      dts({
-        include: ['src/types/**/*.d.ts'],
-        copyDtsFiles: true,
-      })
+      isServe && electronRender(),
+      // copyFile()
     ],
+
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url))
       },
     },
-    build: {
-      rollupOptions: {
-        input: 'src/main.ts',  // 入口文件
-        output: {
-          // 定义文件输出路径
-          dir: path.resolve(__dirname, 'dist'),
-          assetFileNames: '[name].[ext]', // 保持原文件名
-        }
-      },
-      outDir: 'dist',  // 输出目录
-    },
+
     css: {
       preprocessorOptions: {
         sass: {

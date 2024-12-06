@@ -30,8 +30,6 @@
 <script setup lang="ts">
 import { useRunningStore } from "@/stores";
 
-const { text } = useRunningStore();
-
 const onMinClick = () => {
   window.ipcRenderer.send("window-min");
 };

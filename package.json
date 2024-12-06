@@ -1,18 +1,18 @@
 {
   "name": "en-debuger",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
-  "main": "dist-electron/main/index.js",
+  "main": "dist/main/index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build  &&  electron-builder",
+    "dev": "vite --mode debug",
+    "build": "vue-tsc --noEmit && vite build --mode build",
     "preview": "vite preview",
     "test:unit": "vitest",
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "format": "prettier --write src/",
-    "package": "electron-packager ./MyApp --platform=win32 --arch=x64 --overwrite --electron-zip-dir=./"
+    "electron_build": "electron-builder"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
@@ -35,15 +35,17 @@
     "@tsconfig/node22": "^22.0.0",
     "@types/node": "^22.9.3",
     "@types/path-browserify": "^1.0.3",
-    "@vitejs/plugin-vue": "^5.2.1",
+    "@vitejs/plugin-vue": "^5.1.4",
     "@vitejs/plugin-vue-jsx": "^4.1.1",
     "@vue/tsconfig": "^0.7.0",
     "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "electron-packager": "^17.1.2",
     "npm-run-all2": "^7.0.1",
     "sass": "^1.81.0",
     "typescript": "~5.6.3",
     "unplugin-fonts": "^1.1.1",
-    "vite": "^6.0.1",
+    "vite": "^5.4.10",
     "vite-plugin-dts": "^4.3.0",
     "vite-plugin-electron": "^0.29.0",
     "vite-plugin-electron-renderer": "^0.14.6",
@@ -51,5 +53,33 @@
     "vite-plugin-vue-devtools": "^7.6.5",
     "vite-plugin-vuetify": "^2.0.4",
     "vue-tsc": "^2.1.10"
+  },
+  "build": {
+    "asar": true,
+    "appId": "en-debug-asda-de@-asdas",
+    "productName": "网络调试",
+    "directories": {
+      "output": "app-input"
+    },
+    "nsis": {
+      "oneClick": false
+    },
+    "files": [
+      "dist-electron",
+      "dist"
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ]
+    },
+    "linux": {
+      "category": "income",
+      "target": [
+        {
+          "target": "deb"
+        }
+      ]
+    }
   }
 }
