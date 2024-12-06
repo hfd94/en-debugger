@@ -12,7 +12,7 @@ export const useTags = () => {
     })
 
     const activeIndex = computed(() => {
-        return customization.activeTabIndex
+        return customization.activeTab.index
     })
     const hoverIndex = ref("");
     const iconIsActive = computed(() => {
@@ -35,9 +35,14 @@ export const useTags = () => {
         customization.onChangeTab(index)
     }
 
+    const onCloseTab = (id: string) => {
+        customization.onCloseTabById(id)
+    }
+
     return {
         tabs, activeIndex,
         iconIsActive,
+        onCloseTab,
         hoverIndex, onMouseEnter, onMouseLeave, onActiveTab
     }
 

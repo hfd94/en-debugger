@@ -1,43 +1,23 @@
 import { defineStore } from "pinia";
-import { markRaw, reactive, ref, type Component } from "vue";
+import { markRaw, nextTick, reactive, ref, toRaw, type Component } from "vue";
 
 import WorkSpace from "@/layout/Navigation/components/WorkSpace.vue";
 import Environment from "@/layout/Navigation/components/Environment.vue"
 import Toolbox from "@/layout/Navigation/components/Toolbox.vue"
+import { useRunningStore } from "@/stores/running";
+import { useApplication } from "@/stores/application";
 
 
 
 export const useCustomization = defineStore("customization", () => {
+    const running = useRunningStore()
+    const app = useApplication()
+
     const openTabs = ref<Array<VnsDebug.Tabs>>([])
-    const activeTabIndex = ref("")
-    const workDatas = ref<VnsDebug.WorkItem[]>([
-        {
-            title: ".git",
-            children: [
-                {
-                    title: ".git1",
-                    children: [
-                        {
-                            title: ".git2",
-                            children: [],
-                        },
-                    ],
-                },
-                {
-                    title: ".post",
-                    type: "post",
-                },
-                {
-                    title: ".socket",
-                    type: "websocket",
-                },
-            ],
-        },
-        {
-            title: "node_modules",
-            children: [],
-        },
-    ]);
+    const activeTab = reactive({
+        index: ""
+    })
+    const workDatas = ref<VnsDebug.WorkItem[]>([]);
     const state = reactive<{
         expanded: boolean,
         component: Component | undefined
@@ -62,36 +42,99 @@ export const useCustomization = defineStore("customization", () => {
     }
 
     const onChangeTab = (args: any) => {
-        activeTabIndex.value = args
-        console.log(activeTabIndex.value)
+        activeTab.index = args
+        console.log(activeTab.index)
     }
 
-    const onOpenTabs = (item: VnsDebug.WorkItem) => {
+    const onOpenTabs = async (item: VnsDebug.WorkItem) => {
         const ret = openTabs.value.find((v) => {
-            return v.name == item.title
+            return v.title == item.title
         })
         if (!ret) {
-            openTabs.value.push({
-                name: item.title,
-                type: item.type!,
-                id: item.title
-            })
-            activeTabIndex.value = item.title
-        } else {
-            activeTabIndex.value = ret.name
-        }
+            app.show()
+            const panel = running.newTableData(item.id, item.type!)
+            const ret = await panel.getConfig()
+            if (ret) {
+                openTabs.value.push({
+                    title: item.title,
+                    type: item.type!,
+                    id: item.id
+                })
+                nextTick(() => {
+                    activeTab.index = item.id
+                })
+            } else {
+                running.removeTabData(item.id, item.type!)
+            }
 
+            app.hide()
+        } else {
+            activeTab.index = ret.id
+        }
     }
+
+    const onCloseTabById = (id: string) => {
+        const index = openTabs.value.findIndex(v => {
+            return v.id == id
+        })
+        if (index != -1) {
+            const ele = openTabs.value.splice(index, 1)
+
+            if (ele[0].id == activeTab.index) {
+                if (openTabs.value.length > 0) {
+                    if (openTabs.value[index]) {
+                        nextTick(() => {
+                            activeTab.index = toRaw(openTabs.value[index].id)
+                        })
+                    } else {
+                        const len = openTabs.value.length
+                        nextTick(() => {
+                            activeTab.index = toRaw(openTabs.value[len - 1].id)
+                        })
+
+                    }
+                }
+            }
+        }
+    }
+
+    // 被删除的页面
+    const onDeleteMenu = (pages: string[]) => {
+        for (let i = 0; i < pages.length; i++) {
+            const index = openTabs.value.findIndex(v => {
+                return v.id == pages[i]
+            })
+            if (index != -1) {
+                openTabs.value.splice(index, 1)
+            }
+        }
+    }
+
+    const GetWorkMenu = () => {
+        window.ipcRenderer.invoke("get-work-menus").then(ret => {
+            console.log(ret)
+            workDatas.value = ret
+        })
+    }
+
+    const initCustomization = async () => {
+        GetWorkMenu()
+    }
+
+    initCustomization()
 
     return {
         openTabs,
-        activeTabIndex,
+        activeTab,
         workDatas,
         menus,
         state,
+        onCloseTabById,
+        GetWorkMenu,
         onChangeTab,
         onSelectNav,
-        onOpenTabs
+        onOpenTabs,
+        onDeleteMenu
     }
 })
 

@@ -91,6 +91,7 @@ class Database {
     delete(param: deleteParam): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const sql = `DELETE FROM ${param.table} WHERE ${param.condition}`;
+            console.log(sql)
 
             this.db.run(sql, (err) => {
                 if (err) {
@@ -109,16 +110,34 @@ export const initSqlite = async () => {
     try {
         await db.open();
         await db.query({
-            sql: `CREATE TABLE tree (
-                    id TEXT PRIMARY KEY,       -- 节点的唯一标识符（字符串）
-                    name TEXT NOT NULL,        -- 节点名称
-                    parentId TEXT,             -- 父节点 ID，如果是根节点，则为 NULL
-                    type TEXT,                 -- 节点类型（可选）
-                    configure TEXT,            -- 配置
-                    FOREIGN KEY (parentId) REFERENCES tree(id) -- 外键约束，确保 parentId 是有效的 id
-                );`
+            sql: `
+            CREATE TABLE IF NOT EXISTS work_menus ( id TEXT PRIMARY KEY, name TEXT NOT NULL, parentId TEXT, type TEXT );
+            `
+        })
+        await db.query({
+            sql: `CREATE TABLE IF NOT EXISTS work_panel ( id TEXT PRIMARY KEY, url TEXT NOT NULL, type TEXT,  script TEXT );`
+        })
+        await db.query({
+            sql: `CREATE TABLE IF NOT EXISTS work_quick (id INTEGER PRIMARY KEY AUTOINCREMENT,parentId INTEGER,name TEXT,command TEXT)`
         })
 
+        await db.query({
+            sql: `INSERT INTO work_menus (id, name) VALUES ('1b85da56-5fb6-4d6f-b9b5-295db5530882','测试存放');`
+        })
+        await db.query({
+            sql: `INSERT INTO work_menus (id, name) VALUES ('1b85da56-5fb6-4d6f-b9b5-295db5530881','演示二级目录');`
+        })
+        await db.query({
+            sql: `INSERT INTO work_menus (id, name,parentId) VALUES ('1b85da56-5fb6-4d6f-b9b5-295db5530880','二级目录','1b85da56-5fb6-4d6f-b9b5-295db5530881');`
+        })
+        await db.query({
+            sql: `INSERT INTO work_menus (id, name,parentId,type) VALUES ('1b85da56','WebSocket','1b85da56-5fb6-4d6f-b9b5-295db5530882','websocket');`
+        })
+        await db.query({
+            sql: `INSERT INTO work_menus (id, name,parentId,type) VALUES ('1b85da51','Http-Get','1b85da56-5fb6-4d6f-b9b5-295db5530882','get');`
+        })
+        await db.query({ sql: `INSERT INTO work_panel (id, url,type) VALUES ('1b85da56','ws://127.0.0.1:3000','websocket');` })
+        await db.query({ sql: `INSERT INTO work_panel (id, url,type) VALUES ('1b85da51','http://www.baidu.com','get');` })
         console.log("Database initialized.");
     } catch (err) {
         console.error("Error opening database:", err);

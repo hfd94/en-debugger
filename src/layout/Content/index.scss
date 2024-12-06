@@ -1,0 +1,104 @@
+.panel {
+    padding-top: 10px;
+    width: 100%;
+    height: calc(100% - 33px);
+    position: relative;
+
+    :deep(.v-field) {
+        border-radius: 0px 4px 4px 0px;
+    }
+
+    .divide-top {
+        height: 105px;
+
+        .adderss {
+            display: flex;
+            padding: 0px 10px;
+            height: 60px;
+        }
+        .title-overlay {
+            user-select: none;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            height: 40px;
+            width: 90px;
+            position: relative;
+
+            .title {
+                &::after {
+                    content: "";
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    border: 1px solid currentColor;
+                    border-right: thin;
+                    border-radius: 4px 0px 0px 4px;
+                    opacity: 0.38;
+                }
+            }
+        }
+    }
+
+    .tab-root {
+        :deep(.v-tab__slider) {
+            height: 4px;
+            border-radius: 4px 4px 0px 0px;
+        }
+    }
+    .tab-items {
+        :deep(+ .v-btn__content) {
+            width: 150px;
+            min-width: 150px;
+        }
+
+        :deep(.subtitle-1) {
+            text-transform: none;
+            padding-top: 2px;
+            font-size: 12px;
+            width: 103px;
+            text-align: left;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+    }
+
+    .code-left {
+        width: 200px;
+        height: 100%;
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        &::before {
+            content: "";
+            position: absolute;
+            background-color: currentColor;
+            opacity: 0.38;
+            right: 0px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+        }
+        .v-list-item {
+            user-select: none;
+            padding-left: 10px;
+            min-height: 20px;
+            :deep(.v-list-item-title) {
+                font-size: 14px;
+            }
+            :deep(.v-list-item--active) {
+                background-color: transparent !important; /* 去掉选中时的背景色 */
+            }
+        }
+    }
+    .code-right {
+        left: 200px;
+        right: 0px;
+        height: 100%;
+        // width: calc(100% - 200px);
+        padding-left: 200px;
+        // height: 100%;
+    }
+}

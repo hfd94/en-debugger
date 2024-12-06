@@ -1,4 +1,5 @@
 export * from "./customization"
+export * from "./running"
 import { createPinia } from "pinia";
 import type { App } from "vue";
 

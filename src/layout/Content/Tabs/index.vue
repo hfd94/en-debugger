@@ -5,6 +5,7 @@
     slider-color="primary darken-1"
     density="compact"
     class="tab-root"
+    height="32"
     :model-value="activeIndex"
     @update:model-value="onActiveTab"
   >
@@ -12,7 +13,7 @@
       :ripple="false"
       v-for="val in tabs"
       :key="val.id"
-      :text="val.name"
+      :text="val.title"
       :value="val.id"
       style="padding: 0 5px 0 5px"
       class="tab-items"
@@ -28,7 +29,7 @@
         <iconConnect v-else />
       </v-icon>
 
-      <span class="subtitle-1">{{ val.name }}</span>
+      <span class="subtitle-1">{{ val.title }}</span>
 
       <v-btn
         v-if="iconIsActive(val.id)"
@@ -36,6 +37,7 @@
         ripple
         size="x-small"
         variant="text"
+        @click="onClickCloseTab(val.id, $event)"
         style="
           font-size: 8px;
           width: calc(var(--v-btn-height));
@@ -53,10 +55,16 @@ import iconRequest from "@/components/icons/icon-request.vue";
 import iconConnect from "@/components/icons/icon-connect.vue";
 import { useTags } from "./hooks/useTabs";
 
+const onClickCloseTab = (id: string, evt: any) => {
+  evt.stopPropagation();
+  onCloseTab(id);
+};
+
 const {
   iconIsActive,
   activeIndex,
   tabs,
+  onCloseTab,
   onMouseEnter,
   onMouseLeave,
   onActiveTab,

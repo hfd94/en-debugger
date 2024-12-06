@@ -8,10 +8,13 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import electron from 'vite-plugin-electron'
 import electronRender from 'vite-plugin-electron-renderer'
-import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
+import Vuetify from 'vite-plugin-vuetify'
 import ViteFonts from 'unplugin-fonts/vite'
+import monacoEditorPlugin from 'vite-plugin-monaco-editor'
+import path from 'path'
+import dts from 'vite-plugin-dts'
 
-// https://vite.dev/config/
+
 export default defineConfig(({ command }) => {
   fs.rmSync('dist-electron', { recursive: true, force: true })
 
@@ -73,11 +76,29 @@ export default defineConfig(({ command }) => {
           }],
         },
       }),
+      monacoEditorPlugin({
+        languageWorkers: ['editorWorkerService', 'typescript', 'json']
+      }),
+      dts({
+        include: ['src/types/**/*.d.ts'],
+        copyDtsFiles: true,
+      })
     ],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url))
       },
+    },
+    build: {
+      rollupOptions: {
+        input: 'src/main.ts',  // 入口文件
+        output: {
+          // 定义文件输出路径
+          dir: path.resolve(__dirname, 'dist'),
+          assetFileNames: '[name].[ext]', // 保持原文件名
+        }
+      },
+      outDir: 'dist',  // 输出目录
     },
     css: {
       preprocessorOptions: {
@@ -86,6 +107,7 @@ export default defineConfig(({ command }) => {
         },
       },
     },
+
     optimizeDeps: {
       include: [
         'monaco-editor/esm/vs/editor/editor.worker?worker',

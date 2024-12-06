@@ -1,12 +1,15 @@
-import { app, BrowserWindow, shell, ipcMain } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
-import { initSqlite } from './sqlite'
+import { initSqlite, sqDelete, sqInsert, sqQuery } from './sqlite'
+import { randomUUID } from 'node:crypto'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+const HexEditor = "hex-editor"
 
 // The built directory structure
 //
@@ -54,6 +57,7 @@ async function createWindow() {
         minHeight: 720,
         frame: false,
         webPreferences: {
+            webSecurity: false,
             devTools: true,
             // nodeIntegration: true,
             // contextIsolation: true,
@@ -114,24 +118,78 @@ app.on('activate', () => {
         createWindow()
     }
 })
+const subWindows: Record<string, BrowserWindow> = {}
+
+ipcMain.handle('dialog:openFile', async (event) => {
+    const result = await dialog.showOpenDialog({
+        title: '选择Proto文件',
+        filters: [
+            { name: 'proto文件', extensions: ['proto'] },
+            { name: '所有文件', extensions: ['*'] },
+        ],
+        properties: ['openFile', 'multiSelections']
+    });
+
+    return result.filePaths; // 返回选中的文件路径
+});
 
 // New window example arg: new windows url
 ipcMain.handle('open-win', (_, arg) => {
-    const childWindow = new BrowserWindow({
-        webPreferences: {
-            preload,
-            nodeIntegration: true,
-            contextIsolation: false,
-        },
-    })
+    if (!Object.hasOwn(subWindows, arg)) {
+        const childWindow = new BrowserWindow({
+            autoHideMenuBar: true,
+            frame: false,
+            parent: win!,
+            webPreferences: {
+                preload,
+                nodeIntegration: true,   // 允许使用 Node.js 功能
+                // contextIsolation: false // 确保渲染进程的 JS 可以访问 Node.js API
+            },
+        })
 
-    if (VITE_DEV_SERVER_URL) {
-        childWindow.loadURL(`${VITE_DEV_SERVER_URL}#${arg}`)
-    } else {
-        childWindow.loadFile(indexHtml, { hash: arg })
+        if (VITE_DEV_SERVER_URL) {
+            console.log(`${VITE_DEV_SERVER_URL}#${arg}`)
+            childWindow.loadURL(`${VITE_DEV_SERVER_URL}#${arg}`)
+        } else {
+            childWindow.loadFile(indexHtml, { hash: arg })
+        }
+        subWindows[arg] = childWindow
     }
+
 })
 
+// 如果没有打开HexEditor窗口则打开, 如果打开了则传数据
+ipcMain.handle("open-hex-editor", (_, args) => {
+    let exist = subWindows[HexEditor]
+    if (!exist) {
+        const childWindow = new BrowserWindow({
+            autoHideMenuBar: true,
+            frame: false,
+            parent: win!,
+            webPreferences: {
+                preload,
+                nodeIntegration: true,   // 允许使用 Node.js 功能
+                // contextIsolation: false // 确保渲染进程的 JS 可以访问 Node.js API
+            },
+        })
+
+        if (VITE_DEV_SERVER_URL) {
+            console.log(`${VITE_DEV_SERVER_URL}#hex-editor`)
+            childWindow.loadURL(`${VITE_DEV_SERVER_URL}#hex-editor`)
+        } else {
+            childWindow.loadFile(indexHtml, { hash: "hex-editor" })
+        }
+        subWindows[HexEditor] = childWindow
+        exist = childWindow
+        exist.webContents.on('did-finish-load', () => {
+            // 通过子窗口的 `webContents.send` 向子窗口发送数据
+            exist.webContents.send('data-from-main', { key: args });
+        });
+    } else {
+        exist.webContents.send('data-from-main', { key: args });
+    }
+
+})
 
 ipcMain.on('window-min', function () {
     if (win) {
@@ -147,15 +205,104 @@ ipcMain.on('window-max', function () {
         win.maximize();
     }
 })
-ipcMain.on('window-close', function () {
-    if (!win) { return }
-    win.close();
+ipcMain.on('window-close', (event: any, ...args) => {
+    console.log(args)
+    if (args[0]) {
+        if (Object.hasOwn(subWindows, args[0])) {
+            subWindows[args[0]].close()
+            delete (subWindows[args[0]])
+        }
+    } else {
+        if (!win) { return }
+        if (process.platform !== 'darwin') app.quit()
+    }
 })
 
 
+ipcMain.handle("insert-menu-folder", async (_, data) => {
+    data.id = randomUUID()
+    let url = ""
+    if (data.type) {
+        url = data.url
+        delete (data.url)
+    }
+    await sqInsert({ table: "work_menus", data })
+    if (data.type) {
+        await sqInsert({
+            table: "work_panel", data: {
+                id: data.id,
+                url: url,
+                type: data.type,
+            }
+        })
+    }
+
+})
+interface Menu {
+    id: string,
+    name: string
+    parentId?: string
+    type?: string
+    configure?: string
+}
+const buildMenuTree = (menus: Menu[]) => {
+    const map = new Map();
+    const roots: any[] = [];
+
+    // 初始化每个菜单项
+    menus.forEach(menu => {
+        // 为每个菜单项创建一个新对象（避免修改原始数据）
+        map.set(menu.id, { id: menu.id, title: menu.name, type: menu.type, children: menu.type === null ? [] : null });
+    });
+
+    // 构建层级关系
+    menus.forEach(menu => {
+        const menuItem = map.get(menu.id);
+        if (menu.parentId) {
+            // 如果有父节点，将当前节点添加到父节点的 children 中
+            const parentItem = map.get(menu.parentId);
+            if (parentItem.children !== null) {
+                parentItem.children.push(menuItem);
+            }
+        } else {
+            // 如果没有父节点，说明是顶级菜单
+            roots.push(menuItem);
+        }
+    });
+
+    return roots;
+};
+ipcMain.handle("get-work-menus", async (_, data) => {
+    const ret: Array<Menu> = await sqQuery({ sql: `SELECT * FROM work_menus;` })
+    const result = buildMenuTree(ret)
+    return result
+})
 
 
-ipcMain.handle("insetWorkDir", (_, args) => {
-    console.log(args)
-    return "hello world"
+ipcMain.handle("delete-menu", async (_, data: { tab: string[], page: string[] }) => {
+    const strs: string[] = []
+    data.tab.forEach(v => {
+        strs.push(`'${v}'`)
+    })
+    await sqDelete({ table: "work_menus", condition: `id in (${strs.join(',')})` })
+
+    if (data.page.length > 0) {
+        strs.length = 0
+        data.page.forEach(v => {
+            strs.push(`'${v}'`)
+        })
+        await sqDelete({ table: "work_panel", condition: `id in (${strs.join(',')})` })
+    }
+})
+
+ipcMain.handle('get-panel-info', async (_, data: { id: string }) => {
+    const sql = `SELECT * FROM work_panel where id = '${data.id}';`
+    const ret: Array<Menu> = await sqQuery({ sql })
+    return ret
+})
+
+ipcMain.handle('get-quick-info', async (_, data: { id: string }) => {
+    const sql = `SELECT * FROM work_quick where parentId = '${data.id}';`
+    const ret: Array<Menu> = await sqQuery({ sql })
+    return ret
 })

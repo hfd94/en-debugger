@@ -28,6 +28,10 @@
 </template>
 
 <script setup lang="ts">
+import { useRunningStore } from "@/stores";
+
+const { text } = useRunningStore();
+
 const onMinClick = () => {
   window.ipcRenderer.send("window-min");
 };
@@ -40,6 +44,9 @@ const onCloseClick = () => {
   window.ipcRenderer.send("window-close");
 };
 
+const openWin = () => {
+  window.ipcRenderer.invoke("open-win", "hex-edit");
+};
 const onClick2 = async () => {
   const ret = await window.ipcRenderer.invoke("insetWorkDir", {
     id: "123456",
